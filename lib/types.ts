@@ -40,7 +40,7 @@ export interface ClassRoom {
   join_code: string;        // 6 chars, typed by students
   join_token: string;       // encoded in the QR
   allow_join: boolean;
-  join_expires_at?: string;
+  join_expires_at?: string | null;
   teacher_id: number;
   teacher_name: string;
   student_count: number;
@@ -101,4 +101,79 @@ export interface QuizResult {
   rank: number;
   participants: number;
   played_at: string;
+}
+
+export interface Student extends User {
+  quizzes_taken: number;
+}
+
+export interface Settings {
+  domain: string;
+  institute: string;
+  academic_year: string;
+  student_self_signup: boolean;
+  teacher_approval: boolean;
+  max_class_size: number;
+  join_code_expiry_hours: number;
+  default_time: number;
+  default_points: number;
+  speed_bonus: boolean;
+  data_retention_days: number;
+}
+
+export interface ReportQuestion {
+  id: number;
+  order: number;
+  type: QuestionType;
+  text: string;
+  options: string[];
+  correct_options: number[];
+  responses: number;
+  distribution?: number[];
+  accuracy?: number;
+  rating_avg?: number | null;
+  words?: [string, number][];
+  texts?: string[];
+}
+
+export interface Report {
+  quiz_id: number;
+  title: string;
+  mode: QuizMode;
+  status: QuizStatus;
+  played_at: string | null;
+  participants: number;
+  class_size: number;
+  avg_accuracy: number | null;
+  avg_time_ms: number | null;
+  hardest_question: number | null;
+  questions: ReportQuestion[];
+  students: LeaderboardEntry[];
+}
+
+/** Snapshot the live-quiz server sends on every event (see backend/api/routers/ws.py). */
+export interface LiveState {
+  quiz_id: number;
+  title: string;
+  description?: string;
+  mode: QuizMode;
+  phase: "lobby" | "question" | "reveal" | "leaderboard" | "final";
+  index: number;
+  total: number;
+  question: Omit<Question, "correct_options" | "explanation"> | null;
+  time_left_ms: number;
+  paused: boolean;
+  answered: number;
+  joined: { id: number; name: string; roll: string }[];
+  participants: number;
+  reveal: {
+    correct_options: number[];
+    explanation?: string;
+    distribution?: number[];
+    rating_avg?: number | null;
+    words?: [string, number][];
+    texts?: string[];
+  } | null;
+  leaderboard: LeaderboardEntry[] | null;
+  me?: { score: number; rank: number | null; answered: boolean; result: { is_correct: boolean | null; points: number } | null };
 }

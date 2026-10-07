@@ -1,6 +1,6 @@
 # RIT Quiz — frontend prototype
 
-Clickable frontend for the RIT Quiz app (Slido-style live quizzes and polls).
+Clickable frontend for the RIT Quiz app (Interactive live quizzes and polls).
 It runs entirely on mock data, so there is **no backend** in this folder.
 Use it to see every screen and every field; then wire each page to the API.
 

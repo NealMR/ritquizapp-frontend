@@ -3,7 +3,7 @@ import { useState } from "react";
 import AppShell, { PageTitle } from "@/components/AppShell";
 import { Button, Input, Panel, Select } from "@/components/ui";
 import { useAuth } from "@/lib/auth";
-import { DEPARTMENTS, DESIGNATIONS, DIVISIONS, YEARS } from "@/lib/mock";
+import { DEPARTMENTS, DESIGNATIONS, YEARS } from "@/lib/mock";
 
 export default function Profile() {
   const { user } = useAuth();
@@ -21,8 +21,8 @@ export default function Profile() {
                 <Input label="Mobile number" type="tel" defaultValue={user.phone} />
                 <Select label="Department" defaultValue={user.department} options={DEPARTMENTS} />
                 {user.role === "student" && <>
-                  <div className="grid grid-cols-2 gap-3"><Input label="PRN" defaultValue={user.prn} disabled /><Input label="Roll no." defaultValue={user.roll_no} /></div>
-                  <div className="grid grid-cols-2 gap-3"><Select label="Year" defaultValue={user.year} options={YEARS} /><Select label="Division" defaultValue={user.division} options={DIVISIONS} /></div>
+                  <div className="grid grid-cols-1 gap-3"><Input label="PRN / Roll no." defaultValue={user.prn} disabled /></div>
+                  <div className="grid grid-cols-2 gap-3"><Select label="Year" defaultValue={user.year} options={YEARS} /><Input label="Division" defaultValue={user.division} /></div>
                 </>}
                 {user.role === "teacher" && <div className="grid grid-cols-2 gap-3"><Input label="Employee ID" defaultValue={user.employee_id} disabled /><Select label="Designation" defaultValue={user.designation} options={DESIGNATIONS} /></div>}
                 <div className="flex items-center gap-3"><Button type="submit">Save details</Button>{saved === "details" && <span className="text-sm text-emerald-700">Details saved.</span>}</div>

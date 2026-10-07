@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth";
+import { DataProvider } from "@/lib/data";
 
 export const metadata: Metadata = { title: "RIT Quiz", description: "Live quizzes and polls for RIT classrooms" };
 export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#1B2340" };
@@ -8,7 +9,11 @@ export const viewport: Viewport = { width: "device-width", initialScale: 1, them
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className="antialiased"><AuthProvider>{children}</AuthProvider></body>
+      <body className="antialiased">
+        <AuthProvider>
+          <DataProvider>{children}</DataProvider>
+        </AuthProvider>
+      </body>
     </html>
   );
 }

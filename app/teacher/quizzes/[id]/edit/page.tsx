@@ -1,27 +1,38 @@
 "use client";
 import Link from "next/link";
-import { useParams } from "next/navigation";
-import { useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import AppShell from "@/components/AppShell";
 import { Badge, Button, Input, Panel, Select, Textarea, Toggle } from "@/components/ui";
-import { ANS_BG, ANS_SHAPE, blankQuestion, isScored, QTYPES, typeLabel } from "@/lib/questions";
-import { quizzes } from "@/lib/mock";
-import type { Question, QuestionType, Quiz } from "@/lib/types";
+import { blankQuestion, isScored, LETTERS, OPTION_BG, QTYPES, typeLabel } from "@/lib/questions";
+import { api } from "@/lib/api";
+import type { Question, QuestionType, Quiz, Settings } from "@/lib/types";
 
 export default function QuizBuilder() {
   const { id } = useParams<{ id: string }>();
-  const seed = quizzes.find((q) => q.id === Number(id)) ?? quizzes[0];
-  const [quiz, setQuiz] = useState<Quiz>(structuredClone(seed));
+  const router = useRouter();
+  const [quiz, setQuiz] = useState<Quiz | null>(null);
   const [sel, setSel] = useState(0);
   const [saved, setSaved] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [defaults, setDefaults] = useState<Settings | null>(null);
+
+  useEffect(() => {
+    api.getQuiz(Number(id)).then((q) => setQuiz({ ...q, questions: q.questions ?? [] })).catch((e) => setSaved(e.message));
+    api.getSettings().then(setDefaults).catch(() => {});
+  }, [id]);
+
+  if (!quiz) return <AppShell role="teacher"><p>{saved || "Loading..."}</p></AppShell>;
+  const locked = quiz.status === "live" || quiz.status === "closed";
+
   const q = quiz.questions[sel];
 
   const setQ = (p: Partial<Question>) => setQuiz({ ...quiz, questions: quiz.questions.map((x, i) => (i === sel ? { ...x, ...p } : x)) });
-  const add = () => { setQuiz({ ...quiz, questions: [...quiz.questions, blankQuestion(quiz.questions.length + 1)] }); setSel(quiz.questions.length); };
+  const add = () => { setQuiz({ ...quiz, questions: [...quiz.questions, blankQuestion(quiz.questions.length + 1, "mcq", defaults)] }); setSel(quiz.questions.length); };
   const remove = (i: number) => { const qs = quiz.questions.filter((_, j) => j !== i).map((x, j) => ({ ...x, order: j + 1 })); setQuiz({ ...quiz, questions: qs }); setSel(Math.max(0, Math.min(sel, qs.length - 1))); };
   const move = (i: number, d: -1 | 1) => { const j = i + d; if (j < 0 || j >= quiz.questions.length) return; const qs = [...quiz.questions]; [qs[i], qs[j]] = [qs[j], qs[i]]; setQuiz({ ...quiz, questions: qs.map((x, k) => ({ ...x, order: k + 1 })) }); setSel(j); };
   const duplicate = (i: number) => { const qs = [...quiz.questions]; qs.splice(i + 1, 0, { ...structuredClone(qs[i]), id: Date.now() }); setQuiz({ ...quiz, questions: qs.map((x, k) => ({ ...x, order: k + 1 })) }); setSel(i + 1); };
-  const changeType = (t: QuestionType) => { const b = blankQuestion(q.order, t); setQ({ ...b, id: q.id, text: q.text, time_limit_sec: q.time_limit_sec, image_url: q.image_url }); };
+  const changeType = (t: QuestionType) => { const b = blankQuestion(q.order, t, defaults); setQ({ ...b, id: q.id, text: q.text, time_limit_sec: q.time_limit_sec, image_url: q.image_url }); };
 
   const problems = quiz.questions.map((x) => {
     if (!x.text.trim()) return "Question text is empty";
@@ -30,16 +41,46 @@ export default function QuizBuilder() {
     return "";
   });
 
-  const save = () => { setSaved(problems.some(Boolean) ? "Saved as draft. Fix the flagged questions before launching." : "All changes saved."); /* PUT /quizzes/{id} */ };
+  const save = async () => {
+    try {
+      setSaving(true);
+      setSaved("Saving...");
 
+      const isReady = !problems.some(Boolean);
+
+      // Update quiz details
+      await api.updateQuiz(quiz.id, {
+        class_id: quiz.class_id,
+        title: quiz.title,
+        description: quiz.description,
+        mode: quiz.mode,
+        status: isReady ? "scheduled" : "draft",
+        scheduled_at: quiz.scheduled_at,
+        shuffle_questions: quiz.shuffle_questions,
+        shuffle_options: quiz.shuffle_options,
+        speed_bonus: quiz.speed_bonus,
+        show_leaderboard_each_question: quiz.show_leaderboard_each_question,
+        allow_late_join: quiz.allow_late_join
+      });
+
+      // Update all questions
+      await api.updateQuestions(quiz.id, quiz.questions);
+
+      setSaved(isReady ? "All changes saved to server." : "Saved as draft. Fix the flagged questions before launching.");
+    } catch (err: any) {
+      setSaved(`Not saved: ${err.message}`);
+    } finally {
+      setSaving(false);
+    }
+  };
   return (
     <AppShell role="teacher">
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <Link href={`/teacher/classes/${quiz.class_id}`} className="text-sm font-semibold text-brand">‹ Back to class</Link>
         <div className="ml-auto flex items-center gap-2">
           {saved && <span className="text-sm text-slate-600">{saved}</span>}
-          <Button variant="outline" onClick={save}>Save draft</Button>
-          <Link href={`/teacher/quizzes/${quiz.id}/live`}><Button disabled={problems.some(Boolean) || quiz.questions.length === 0}>Launch live</Button></Link>
+          <Button variant="outline" onClick={save} disabled={saving || locked}>{locked ? "Already run" : "Save"}</Button>
+          <Button disabled={saving || locked || problems.some(Boolean) || quiz.questions.length === 0} onClick={async () => { await save(); router.push(`/teacher/quizzes/${quiz.id}/live`); }}>Save and launch live</Button>
         </div>
       </div>
 
@@ -80,7 +121,7 @@ export default function QuizBuilder() {
               <div className="flex flex-col gap-4">
                 <Select label="Question type" value={q.type} onChange={(e) => changeType(e.target.value as QuestionType)} options={QTYPES.map((t) => ({ value: t.value, label: t.label }))} />
                 <Textarea label="Question" value={q.text} onChange={(e) => setQ({ text: e.target.value })} placeholder="Type the question students will see" maxLength={300} hint={`${q.text.length}/300`} />
-                <Input label="Image URL (optional)" value={q.image_url ?? ""} onChange={(e) => setQ({ image_url: e.target.value })} placeholder="https://… or upload in the real app" />
+                <Input label="Image URL (optional)" value={q.image_url ?? ""} onChange={(e) => setQ({ image_url: e.target.value })} placeholder="https://… link to an image shown with the question" />
 
                 {(q.type === "mcq" || q.type === "multi_select" || q.type === "true_false") && (
                   <fieldset>
@@ -89,19 +130,19 @@ export default function QuizBuilder() {
                       {q.options.map((o, i) => {
                         const correct = q.correct_options.includes(i);
                         return (
-                          <div key={i} className={`flex items-center gap-2 rounded-lg p-2 text-white ${ANS_BG[i]}`}>
-                            <span className="w-6 text-center" aria-hidden>{ANS_SHAPE[i]}</span>
+                          <div key={i} className="flex items-center gap-2 rounded-xl border-2 border-slate-200 bg-slate-50 p-2">
+                            <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg font-display font-bold text-white shadow-sm ${OPTION_BG[i]}`} aria-hidden>{LETTERS[i]}</span>
                             <input aria-label={`Option ${i + 1}`} value={o} disabled={q.type === "true_false"} onChange={(e) => setQ({ options: q.options.map((x, j) => (j === i ? e.target.value : x)) })}
-                              placeholder={`Option ${i + 1}`} className="min-w-0 flex-1 rounded-md bg-white/95 px-2 py-1.5 text-sm text-ink" />
+                              placeholder={`Option ${i + 1}`} className="min-w-0 flex-1 rounded-md bg-white px-2 py-1.5 text-sm font-semibold text-ink border border-slate-200 focus:border-brand focus:ring-2 focus:ring-brand/10 transition-all" />
                             {quiz.mode === "quiz" && (
-                              <label className="flex items-center gap-1 text-xs font-semibold">
+                              <label className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-slate-600">
                                 <input type={q.type === "multi_select" ? "checkbox" : "radio"} name="correct" checked={correct}
                                   onChange={() => setQ({ correct_options: q.type === "multi_select" ? (correct ? q.correct_options.filter((x) => x !== i) : [...q.correct_options, i]) : [i] })} />
                                 Correct
                               </label>
                             )}
                             {q.type !== "true_false" && q.options.length > 2 && (
-                              <button type="button" aria-label="Remove option" className="px-1" onClick={() => setQ({ options: q.options.filter((_, j) => j !== i), correct_options: q.correct_options.filter((x) => x !== i).map((x) => (x > i ? x - 1 : x)) })}>✕</button>
+                              <button type="button" aria-label="Remove option" className="px-1 text-slate-400 hover:text-ansA transition-colors" onClick={() => setQ({ options: q.options.filter((_, j) => j !== i), correct_options: q.correct_options.filter((x) => x !== i).map((x) => (x > i ? x - 1 : x)) })}>✕</button>
                             )}
                           </div>
                         );
