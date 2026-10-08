@@ -91,6 +91,7 @@ export interface LeaderboardEntry {
 }
 
 export interface QuizResult {
+  id: number;
   quiz_id: number;
   quiz_title: string;
   class_name: string;
@@ -98,9 +99,43 @@ export interface QuizResult {
   max_score: number;
   correct: number;
   total: number;
-  rank: number;
+  rank: number | null;
   participants: number;
   played_at: string;
+}
+
+export interface StudentQuizOverviewQuestion {
+  id: number;
+  order: number;
+  type: QuestionType;
+  text: string;
+  options: string[];
+  correct_options: number[];
+  explanation?: string;
+  points: number;
+  student_answer?: any;
+  is_correct: boolean;
+  points_awarded: number;
+  response_time_ms?: number | null;
+}
+
+export interface StudentQuizOverview {
+  quiz_id: number;
+  quiz_title: string;
+  description?: string;
+  class_name: string;
+  subject_code: string;
+  mode: QuizMode;
+  status: QuizStatus;
+  played_at: string | null;
+  score: number;
+  max_score: number;
+  correct: number;
+  total: number;
+  rank: number | null;
+  participants: number;
+  questions: StudentQuizOverviewQuestion[];
+  leaderboard: { student_id: number; full_name: string; roll_no: string; score: number; rank: number | null }[];
 }
 
 export interface Student extends User {

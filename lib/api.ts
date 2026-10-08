@@ -1,4 +1,4 @@
-import type { ClassRoom, Quiz, Question, QuizResult, Report, Settings, Student, User } from "./types";
+import type { ClassRoom, Quiz, Question, QuizResult, Report, Settings, Student, User, StudentQuizOverview } from "./types";
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 export const WS_URL = API_URL.replace(/^http/, "ws");
@@ -51,8 +51,8 @@ export const api = {
   updateClass: (id: number, data: Partial<ClassRoom>) => req<ClassRoom>(`/classes/${id}`, { method: "PATCH", body: data }),
   regenerateCode: (id: number) => req<ClassRoom>(`/classes/${id}/regenerate-code`, { method: "POST" }),
   archiveClass: (id: number) => req(`/classes/${id}`, { method: "DELETE" }),
-  getClassByToken: (token: string) => req<ClassRoom>(`/classes/by-token/${encodeURIComponent(token)}`),
-  joinClass: (token: string) => req<{ class_id: number }>(`/classes/${encodeURIComponent(token)}/join`, { method: "POST" }),
+  getClassByToken: (token: string) => req<ClassRoom>(`/classes/by-token/${encodeURIComponent(token.trim())}`),
+  joinClass: (token: string) => req<{ class_id: number; message?: string }>(`/classes/${encodeURIComponent(token.trim())}/join`, { method: "POST" }),
   getClassStudents: (id: number) => req<Student[]>(`/classes/${id}/students`),
   removeStudent: (id: number, userId: number) => req(`/classes/${id}/students/${userId}`, { method: "DELETE" }),
   exportStudents: (c: ClassRoom) => download(`/classes/${c.id}/students.csv`, `${c.subject_code}-students.csv`),
@@ -67,5 +67,6 @@ export const api = {
   getReport: (id: number) => req<Report>(`/quizzes/${id}/report`),
   exportReport: (id: number) => download(`/quizzes/${id}/report.csv`, `quiz-${id}-report.csv`),
 
-  getMyResults: () => req<QuizResult[]>("/results/me"),
+  getMyResults: (classId?: number) => req<QuizResult[]>(classId ? `/results/me?class_id=${classId}` : "/results/me"),
+  getQuizOverview: (quizId: number) => req<StudentQuizOverview>(`/quizzes/${quizId}/overview`),
 };
