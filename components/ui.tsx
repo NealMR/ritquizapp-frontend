@@ -89,34 +89,54 @@ export function Badge({ tone = "slate", children }: { tone?: "slate" | "green" |
   return <span className={`inline-flex items-center rounded-lg px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider ${t}`}>{children}</span>;
 }
 
-export function Modal({ open, title, onClose, children }: { open: boolean; title: string; onClose: () => void; children: React.ReactNode }) {
+export function Modal({
+  open,
+  title,
+  onClose,
+  maxWidth = "max-w-xl",
+  children,
+}: {
+  open: boolean;
+  title: string;
+  onClose: () => void;
+  maxWidth?: string;
+  children: React.ReactNode;
+}) {
   return (
     <AnimatePresence>
       {open && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4">
+        <div className="fixed inset-0 z-50 overflow-y-auto">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-ink/40 backdrop-blur-sm"
+            className="fixed inset-0 bg-ink/50 backdrop-blur-sm"
             onClick={onClose}
           />
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            transition={{ type: "spring", bounce: 0, duration: 0.4 }}
-            className="relative max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-t-3xl bg-white shadow-2xl sm:rounded-3xl border border-slate-200/50"
-            role="dialog"
-            aria-modal="true"
-            aria-label={title}
-          >
-            <header className="sticky top-0 z-10 flex items-center justify-between border-b border-line bg-white/90 px-6 py-5 backdrop-blur">
-              <h2 className="font-display text-xl font-bold tracking-tight">{title}</h2>
-              <button onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 transition-colors" aria-label="Close">✕</button>
-            </header>
-            <div className="p-6">{children}</div>
-          </motion.div>
+          <div className="flex min-h-full items-center justify-center p-3 sm:p-6 text-center">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              transition={{ type: "spring", bounce: 0, duration: 0.3 }}
+              className={`relative my-6 w-full ${maxWidth} transform rounded-2xl bg-white text-left shadow-2xl transition-all border border-slate-200/60 max-h-[calc(100vh-4rem)] flex flex-col overflow-hidden`}
+              role="dialog"
+              aria-modal="true"
+              aria-label={title}
+            >
+              <header className="flex shrink-0 items-center justify-between border-b border-line bg-white px-6 py-4 rounded-t-2xl">
+                <h2 className="font-display text-lg sm:text-xl font-bold tracking-tight text-ink truncate pr-3">{title}</h2>
+                <button
+                  onClick={onClose}
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+                  aria-label="Close"
+                >
+                  ✕
+                </button>
+              </header>
+              <div className="overflow-y-auto p-5 sm:p-6 flex-1 text-slate-700">{children}</div>
+            </motion.div>
+          </div>
         </div>
       )}
     </AnimatePresence>

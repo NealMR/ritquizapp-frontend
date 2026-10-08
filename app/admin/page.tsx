@@ -105,7 +105,7 @@ export default function AdminUsers() {
                   <td className="pr-3">{!u.is_approved ? <Badge tone="amber">Pending</Badge> : u.is_active ? <Badge tone="green">Active</Badge> : <Badge tone="red">Disabled</Badge>}</td>
                   <td className="whitespace-nowrap">
                     <Button variant="ghost" onClick={() => patch(u.id, { is_active: !u.is_active })}>{u.is_active ? "Disable" : "Enable"}</Button>
-                    <Button variant="ghost" disabled title="Arrives with the email/auth update">Reset password</Button>
+                    <Button variant="ghost" onClick={async () => { if (!confirm(`Reset password for ${u.full_name}?`)) return; try { const { temp_password } = await api.resetUserPassword(u.id); setNotice(`${u.full_name}: new temporary password ${temp_password} (share it privately).`); } catch (e) { setNotice((e as Error).message); } }}>Reset password</Button>
                   </td>
                 </tr>
               ))}

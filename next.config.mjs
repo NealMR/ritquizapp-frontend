@@ -1,3 +1,3 @@
 /** @type {import('next').NextConfig} */
-const nextConfig = { eslint: { ignoreDuringBuilds: true } };
+const nextConfig = { output: "standalone", eslint: { ignoreDuringBuilds: true } };
 export default nextConfig;

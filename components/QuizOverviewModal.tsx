@@ -45,6 +45,7 @@ export default function QuizOverviewModal({
       open={Boolean(quizId)}
       title={data ? `${data.quiz_title} — Overview` : "Test Overview"}
       onClose={onClose}
+      maxWidth="max-w-3xl"
     >
       {loading ? (
         <div className="flex flex-col gap-4 py-4 animate-pulse">

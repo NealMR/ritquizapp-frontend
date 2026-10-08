@@ -33,6 +33,11 @@ async function download(path: string, filename: string) {
 
 export const api = {
   signup: (data: unknown) => req("/auth/signup", { method: "POST", body: data }),
+  forgotPassword: (email: string) => req("/auth/forgot-password", { method: "POST", body: { email } }),
+  resetPassword: (token: string, password: string) => req("/auth/reset-password", { method: "POST", body: { token, password } }),
+  updateMe: (p: Partial<User>) => req<User>("/users/me", { method: "PUT", body: p }),
+  changePassword: (current_password: string, new_password: string) => req("/users/me/password", { method: "POST", body: { current_password, new_password } }),
+  resetUserPassword: (id: number) => req<{ temp_password: string }>(`/users/${id}/reset-password`, { method: "POST" }),
 
   getSettings: () => req<Settings>("/settings"),
   saveSettings: (s: Settings) => req<Settings>("/settings", { method: "PUT", body: s }),
