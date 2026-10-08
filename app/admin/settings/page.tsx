@@ -25,7 +25,7 @@ export default function AdminSettings() {
   return (
     <AppShell role="admin">
       <PageTitle title="Settings" sub="Rules that apply across the whole college." />
-      <form onSubmit={save} className="grid gap-6 lg:grid-cols-2">
+      <form onSubmit={save} className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Panel title="Institute">
           <div className="flex flex-col gap-4">
             <Input label="Institute name" value={s.institute} onChange={set("institute")} />

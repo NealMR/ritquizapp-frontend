@@ -212,3 +212,18 @@ export interface LiveState {
   leaderboard: LeaderboardEntry[] | null;
   me?: { score: number; rank: number | null; answered: boolean; result: { is_correct: boolean | null; points: number } | null };
 }
+
+export interface ClassOverview {
+  students: number;
+  quizzes: { draft: number; scheduled: number; live: number; closed: number };
+  live_quiz: { id: number; title: string } | null;
+  avg_accuracy: number | null;
+  avg_participation: number | null;
+  last_activity: string | null;
+  recent_quizzes: { quiz_id: number; title: string; mode: string; played_at: string | null; participants: number; accuracy: number | null }[];
+  top_students: { id: number; full_name: string; roll_no: string; score: number; quizzes: number; accuracy: number | null }[];
+  struggling: { id: number; full_name: string; roll_no: string; accuracy: number; quizzes: number }[];
+  not_participated: { id: number; full_name: string; roll_no: string }[];
+  recent_joins: { id: number; full_name: string; roll_no: string; at: string }[];
+  deletes_on: string | null;
+}

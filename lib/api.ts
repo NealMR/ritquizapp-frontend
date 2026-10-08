@@ -1,4 +1,4 @@
-import type { ClassRoom, Quiz, Question, QuizResult, Report, Settings, Student, User, StudentQuizOverview } from "./types";
+import type { ClassOverview, ClassRoom, Quiz, Question, QuizResult, Report, Settings, Student, User, StudentQuizOverview } from "./types";
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 export const WS_URL = API_URL.replace(/^http/, "ws");
@@ -58,8 +58,10 @@ export const api = {
   archiveClass: (id: number) => req(`/classes/${id}`, { method: "DELETE" }),
   getClassByToken: (token: string) => req<ClassRoom>(`/classes/by-token/${encodeURIComponent(token.trim())}`),
   joinClass: (token: string) => req<{ class_id: number; message?: string }>(`/classes/${encodeURIComponent(token.trim())}/join`, { method: "POST" }),
+  getClassOverview: (id: number) => req<ClassOverview>(`/classes/${id}/overview`),
   getClassStudents: (id: number) => req<Student[]>(`/classes/${id}/students`),
   removeStudent: (id: number, userId: number) => req(`/classes/${id}/students/${userId}`, { method: "DELETE" }),
+  exportClassResults: (c: ClassRoom) => download(`/results/class/${c.id}.csv`, `${c.subject_code}-results.csv`),
   exportStudents: (c: ClassRoom) => download(`/classes/${c.id}/students.csv`, `${c.subject_code}-students.csv`),
 
   getQuizzes: (classId?: number) => req<Quiz[]>(classId ? `/quizzes?class_id=${classId}` : "/quizzes"),

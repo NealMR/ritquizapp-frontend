@@ -1,7 +1,7 @@
 "use client";
 import AppShell, { PageTitle } from "@/components/AppShell";
 import { Panel, Button } from "@/components/ui";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { api } from "@/lib/api";
 import type { QuizResult } from "@/lib/types";
 import QuizOverviewModal from "@/components/QuizOverviewModal";
@@ -11,6 +11,7 @@ export default function Results() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedQuizId, setSelectedQuizId] = useState<number | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const fetchResults = useCallback(() => {
     setLoading(true);
@@ -39,6 +40,17 @@ export default function Results() {
   const totalPoints = myResults.reduce((sum, r) => sum + (r.score || 0), 0).toLocaleString("en-IN");
   const ranked = myResults.filter((r) => typeof r.rank === "number" && r.rank !== null && r.rank > 0);
   const bestRank = ranked.length > 0 ? `#${Math.min(...ranked.map((r) => r.rank!))}` : "—";
+
+  // Filter results by search query
+  const filteredResults = useMemo(() => {
+    if (!searchQuery.trim()) return myResults;
+    const q = searchQuery.toLowerCase().trim();
+    return myResults.filter(
+      (r) =>
+        r.quiz_title.toLowerCase().includes(q) ||
+        r.class_name.toLowerCase().includes(q)
+    );
+  }, [myResults, searchQuery]);
 
   return (
     <AppShell role="student">
@@ -85,7 +97,34 @@ export default function Results() {
         )}
       </div>
 
-      <Panel title="All quiz results">
+      <Panel
+        title="All quiz results"
+        action={
+          <div className="flex items-center gap-3">
+            <div className="relative w-56 sm:w-72">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search quiz or class..."
+                className="w-full rounded-xl border border-line bg-slate-50/80 px-3.5 py-1.5 pl-9 text-xs text-ink placeholder:text-slate-400 focus:border-brand focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand/10 transition-all"
+              />
+              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs">
+                🔍
+              </span>
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs p-0.5"
+                  aria-label="Clear search"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          </div>
+        }
+      >
         {loading ? (
           <div className="animate-pulse space-y-4 py-6">
             <div className="h-5 w-48 rounded bg-slate-200" />
@@ -95,14 +134,37 @@ export default function Results() {
           </div>
         ) : (
           <>
+            {searchQuery && (
+              <div className="mb-4 flex items-center justify-between text-xs text-slate-500">
+                <p>
+                  Found <span className="font-bold text-ink">{filteredResults.length}</span> of {myResults.length} results matching &ldquo;{searchQuery}&rdquo;
+                </p>
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="font-semibold text-brand hover:underline"
+                >
+                  Clear search
+                </button>
+              </div>
+            )}
+
             {/* Mobile list view */}
             <ul className="flex flex-col divide-y divide-line sm:hidden">
-              {myResults.length === 0 && (
-                <li className="py-6 text-center text-sm text-slate-500">
-                  No results yet. Join a live quiz to see your scores here.
+              {filteredResults.length === 0 && (
+                <li className="py-8 text-center text-sm text-slate-500">
+                  {searchQuery ? (
+                    <div>
+                      <p>No results match &ldquo;{searchQuery}&rdquo;</p>
+                      <Button variant="outline" className="mt-3 text-xs" onClick={() => setSearchQuery("")}>
+                        Clear search filter
+                      </Button>
+                    </div>
+                  ) : (
+                    "No results yet. Join a live quiz to see your scores here."
+                  )}
                 </li>
               )}
-              {myResults.map((r, idx) => (
+              {filteredResults.map((r, idx) => (
                 <li
                   key={`${r.quiz_id}-${r.played_at}-${r.id || idx}`}
                   onClick={() => setSelectedQuizId(r.quiz_id)}
@@ -146,14 +208,24 @@ export default function Results() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-line">
-                  {myResults.length === 0 && (
+                  {filteredResults.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="py-8 text-center text-slate-500">
-                        No results yet. Join a live quiz to see your scores here.
+                      <td colSpan={6} className="py-10 text-center text-slate-500">
+                        {searchQuery ? (
+                          <div>
+                            <p className="font-medium text-slate-700">No results match &ldquo;{searchQuery}&rdquo;</p>
+                            <p className="text-xs text-slate-400 mt-1">Try searching by another title or class name.</p>
+                            <Button variant="outline" className="mt-3 text-xs" onClick={() => setSearchQuery("")}>
+                              Clear search
+                            </Button>
+                          </div>
+                        ) : (
+                          "No results yet. Join a live quiz to see your scores here."
+                        )}
                       </td>
                     </tr>
                   )}
-                  {myResults.map((r, idx) => (
+                  {filteredResults.map((r, idx) => (
                     <tr
                       key={`${r.quiz_id}-${r.played_at}-${r.id || idx}`}
                       onClick={() => setSelectedQuizId(r.quiz_id)}

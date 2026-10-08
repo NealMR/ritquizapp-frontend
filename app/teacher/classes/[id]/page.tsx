@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import AppShell, { PageTitle } from "@/components/AppShell";
+import ClassOverview from "@/components/ClassOverview";
 import JoinQR from "@/components/JoinQR";
 import { Badge, Button, Input, Modal, Panel, Select, Textarea, Toggle, statusTone } from "@/components/ui";
 import { YEARS, yearLabel } from "@/lib/mock";
@@ -10,7 +11,7 @@ import { useData } from "@/lib/data";
 import { api } from "@/lib/api";
 import type { ClassRoom, Quiz, QuizMode, Student } from "@/lib/types";
 
-const TABS = ["Quizzes & polls", "Students", "Join & settings"] as const;
+const TABS = ["Overview", "Quizzes & polls", "Students", "Join & settings"] as const;
 
 export default function ClassDetail() {
   const { id } = useParams<{ id: string }>();
@@ -24,6 +25,7 @@ export default function ClassDetail() {
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState(false);
   const [search, setSearch] = useState("");
+  const [quizSearch, setQuizSearch] = useState("");
   const [msg, setMsg] = useState("");
 
   const load = useCallback(() => {
@@ -41,6 +43,12 @@ export default function ClassDetail() {
   if (!c) return <AppShell role="teacher"><p className="text-slate-500">{msg || "Loading…"}</p></AppShell>;
 
   const shown = students.filter((u) => !search || `${u.full_name} ${u.roll_no} ${u.prn}`.toLowerCase().includes(search.toLowerCase()));
+  const filteredQuizzes = qs.filter((q) =>
+    !quizSearch.trim() ||
+    q.title.toLowerCase().includes(quizSearch.toLowerCase().trim()) ||
+    q.mode.toLowerCase().includes(quizSearch.toLowerCase().trim()) ||
+    q.status.toLowerCase().includes(quizSearch.toLowerCase().trim())
+  );
   const update = (p: Partial<ClassRoom>) => act(async () => { setC(await api.updateClass(c.id, p)); refresh(); });
 
   return (
@@ -58,11 +66,53 @@ export default function ClassDetail() {
         ))}
       </div>
 
+      {tab === "Overview" && <ClassOverview classId={c.id} onExport={() => act(() => api.exportClassResults(c))} />}
+
       {tab === "Quizzes & polls" && (
         <div className="overflow-hidden rounded-xl border border-line bg-white">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line p-3">
+            <div className="flex items-center gap-2">
+              {qs.length > 0 && (
+                <div className="relative w-56 sm:w-72">
+                  <input
+                    type="text"
+                    value={quizSearch}
+                    onChange={(e) => setQuizSearch(e.target.value)}
+                    placeholder="Search quizzes & polls..."
+                    className="w-full rounded-xl border border-line bg-slate-50/80 px-3 py-1.5 pl-8 text-xs text-ink placeholder:text-slate-400 focus:border-brand focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand/10 transition-all"
+                  />
+                  <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs">
+                    🔍
+                  </span>
+                  {quizSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setQuizSearch("")}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs p-0.5"
+                      aria-label="Clear quiz search"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              )}
+              {quizSearch.trim() && (
+                <span className="text-xs text-slate-500">
+                  Found <strong className="text-ink">{filteredQuizzes.length}</strong> of {qs.length}
+                </span>
+              )}
+            </div>
+            <Button variant="outline" onClick={() => act(() => api.exportClassResults(c))}>Export all results (CSV)</Button>
+          </div>
           {qs.length === 0 && <p className="p-8 text-center text-slate-500">No quizzes yet. Build one before class, then launch it live.</p>}
+          {qs.length > 0 && filteredQuizzes.length === 0 && (
+            <div className="p-8 text-center text-slate-500">
+              <p>No quizzes match &ldquo;{quizSearch}&rdquo;.</p>
+              <Button variant="outline" className="mt-3 text-xs" onClick={() => setQuizSearch("")}>Clear search</Button>
+            </div>
+          )}
           <ul className="divide-y divide-line">
-            {qs.map((q) => (
+            {filteredQuizzes.map((q) => (
               <li key={q.id} className="flex flex-wrap items-center gap-4 p-4">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2"><p className="font-semibold">{q.title}</p><Badge tone={statusTone(q.status)}>{q.status}</Badge><Badge>{q.mode}</Badge></div>
@@ -89,7 +139,30 @@ export default function ClassDetail() {
 
       {tab === "Students" && (
         <Panel title={`Students (${students.length})`} action={<Button variant="outline" onClick={() => act(() => api.exportStudents(c))}>Export CSV</Button>}>
-          <div className="mb-4 max-w-sm"><Input label="Search students" placeholder="Name, roll no or PRN" value={search} onChange={(e) => setSearch(e.target.value)} /></div>
+          <div className="mb-4 max-w-sm">
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Search students (Name, roll no or PRN)..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full rounded-xl border border-line bg-slate-50/80 px-3.5 py-2 pl-9 text-xs text-ink placeholder:text-slate-400 focus:border-brand focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand/10 transition-all"
+              />
+              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs">
+                🔍
+              </span>
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch("")}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs p-0.5"
+                  aria-label="Clear student search"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[600px] text-left text-sm">
               <thead className="border-b border-line text-slate-500"><tr><th className="py-2 font-semibold">Roll</th><th className="font-semibold">Name</th><th className="font-semibold">PRN</th><th className="font-semibold">Email</th><th className="font-semibold">Quizzes taken</th><th /></tr></thead>
@@ -106,7 +179,7 @@ export default function ClassDetail() {
       )}
 
       {tab === "Join & settings" && (
-        <div className="grid gap-6 md:grid-cols-[auto_1fr]">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-[auto_1fr]">
           <Panel title="Join this class"><JoinQR c={c} size={220} /></Panel>
           <Panel title="Class settings">
             <Toggle label="Allow students to join" hint="Students who scan the QR or enter the code are added immediately." checked={c.allow_join} onChange={(v) => update({ allow_join: v })} />

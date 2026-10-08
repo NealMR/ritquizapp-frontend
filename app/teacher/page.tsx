@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import AppShell, { PageTitle } from "@/components/AppShell";
 import JoinQR from "@/components/JoinQR";
 import { Badge, Button, Input, Modal, Select, Toggle } from "@/components/ui";
@@ -15,12 +15,27 @@ export default function TeacherHome() {
   const [quizzesList, setQuizzesList] = useState<Quiz[]>([]);
   const [creating, setCreating] = useState(false);
   const [qrFor, setQrFor] = useState<ClassRoom | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const { refresh } = useData();
 
   useEffect(() => {
     api.getClasses().then(setList).catch(console.error);
     api.getQuizzes().then(setQuizzesList).catch(console.error);
   }, []);
+
+  const filteredList = useMemo(() => {
+    if (!searchQuery.trim()) return list;
+    const q = searchQuery.toLowerCase().trim();
+    return list.filter((c) =>
+      c.name.toLowerCase().includes(q) ||
+      c.subject_code.toLowerCase().includes(q) ||
+      (c.subject_name && c.subject_name.toLowerCase().includes(q)) ||
+      (c.department && c.department.toLowerCase().includes(q)) ||
+      (c.division && c.division.toLowerCase().includes(q)) ||
+      yearLabel(c.year).toLowerCase().includes(q) ||
+      (c.academic_year && c.academic_year.toLowerCase().includes(q))
+    );
+  }, [list, searchQuery]);
 
   const live = quizzesList.find((q) => q.status === "live");
 
@@ -47,37 +62,87 @@ export default function TeacherHome() {
           <Button onClick={() => setCreating(true)}>Create class</Button>
         </motion.div>
       ) : (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {list.map((c, i) => {
-            const qs = quizzesList.filter((q) => q.class_id === c.id);
-            return (
-              <motion.article
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: i * 0.1, ease: [0.16, 1, 0.3, 1] }}
-                key={c.id}
-                className="flex flex-col rounded-2xl border border-line bg-white shadow-soft hover:shadow-float transition-all duration-300 group hover:-translate-y-1"
-              >
-                <div className="border-b border-line/60 p-6">
-                  <div className="mb-3 flex items-center justify-between">
-                    <span className="text-sm font-bold tracking-tight text-brand">{c.subject_code}</span>
-                    {c.allow_join ? <Badge tone="green">Joining open</Badge> : <Badge>Joining closed</Badge>}
-                  </div>
-                  <h2 className="font-display text-xl font-bold leading-tight group-hover:text-brand transition-colors">{c.name}</h2>
-                  <p className="mt-2 text-sm font-medium text-slate-500">{yearLabel(c.year)} · Div {c.division} · Sem {c.semester}</p>
-                </div>
-                <dl className="grid grid-cols-2 gap-4 p-6 text-sm">
-                  <div><dt className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Students</dt><dd className="font-display text-3xl font-extrabold text-ink">{c.student_count || 0}</dd></div>
-                  <div><dt className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Quizzes</dt><dd className="font-display text-3xl font-extrabold text-ink">{qs.length}</dd></div>
-                </dl>
-                <div className="mt-auto flex gap-3 p-6 pt-0">
-                  <Link href={`/teacher/classes/${c.id}`} className="flex-1"><Button className="w-full">Open Dashboard</Button></Link>
-                  <Button variant="outline" onClick={() => setQrFor(c)} className="px-4">Show QR</Button>
-                </div>
-              </motion.article>
-            );
-          })}
-        </div>
+        <>
+          <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="relative w-full sm:w-80">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search classes by name, code, dept..."
+                className="w-full rounded-xl border border-line bg-white px-3.5 py-2 pl-9 text-sm text-ink placeholder:text-slate-400 shadow-soft focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/10 transition-all"
+              />
+              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">
+                🔍
+              </span>
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs p-0.5"
+                  aria-label="Clear search"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+
+            {searchQuery.trim() && (
+              <div className="flex items-center gap-2 text-xs text-slate-500">
+                <span>
+                  Found <strong className="text-ink">{filteredList.length}</strong> of {list.length} classes
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  className="font-semibold text-brand hover:underline"
+                >
+                  Clear search
+                </button>
+              </div>
+            )}
+          </div>
+
+          {filteredList.length === 0 ? (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-2xl border border-line bg-white p-12 text-center shadow-soft">
+              <p className="font-display text-xl font-bold">No classes match &ldquo;{searchQuery}&rdquo;</p>
+              <p className="mt-2 mb-4 text-slate-500 font-medium">Try searching by a different name, subject code, or department.</p>
+              <Button variant="outline" onClick={() => setSearchQuery("")}>Clear search</Button>
+            </motion.div>
+          ) : (
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {filteredList.map((c, i) => {
+                const qs = quizzesList.filter((q) => q.class_id === c.id);
+                return (
+                  <motion.article
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4, delay: i * 0.1, ease: [0.16, 1, 0.3, 1] }}
+                    key={c.id}
+                    className="flex flex-col rounded-2xl border border-line bg-white shadow-soft hover:shadow-float transition-all duration-300 group hover:-translate-y-1"
+                  >
+                    <div className="border-b border-line/60 p-6">
+                      <div className="mb-3 flex items-center justify-between">
+                        <span className="text-sm font-bold tracking-tight text-brand">{c.subject_code}</span>
+                        {c.allow_join ? <Badge tone="green">Joining open</Badge> : <Badge>Joining closed</Badge>}
+                      </div>
+                      <h2 className="font-display text-xl font-bold leading-tight group-hover:text-brand transition-colors">{c.name}</h2>
+                      <p className="mt-2 text-sm font-medium text-slate-500">{yearLabel(c.year)} · Div {c.division} · Sem {c.semester}</p>
+                    </div>
+                    <dl className="grid grid-cols-2 gap-4 p-6 text-sm">
+                      <div><dt className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Students</dt><dd className="font-display text-3xl font-extrabold text-ink">{c.student_count || 0}</dd></div>
+                      <div><dt className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Quizzes</dt><dd className="font-display text-3xl font-extrabold text-ink">{qs.length}</dd></div>
+                    </dl>
+                    <div className="mt-auto flex gap-3 p-6 pt-0">
+                      <Link href={`/teacher/classes/${c.id}`} className="flex-1"><Button className="w-full">Open Dashboard</Button></Link>
+                      <Button variant="outline" onClick={() => setQrFor(c)} className="px-4">Show QR</Button>
+                    </div>
+                  </motion.article>
+                );
+              })}
+            </div>
+          )}
+        </>
       )}
 
       <CreateClassModal open={creating} onClose={() => setCreating(false)} onCreate={(c) => { setList([c, ...list]); setCreating(false); setQrFor(c); refresh(); }} />

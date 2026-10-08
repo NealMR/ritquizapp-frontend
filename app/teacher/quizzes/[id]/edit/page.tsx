@@ -84,7 +84,7 @@ export default function QuizBuilder() {
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[280px_1fr]">
         {/* Question list */}
         <aside className="flex flex-col gap-3">
           <Panel title="Quiz details">
@@ -126,7 +126,7 @@ export default function QuizBuilder() {
                 {(q.type === "mcq" || q.type === "multi_select" || q.type === "true_false") && (
                   <fieldset>
                     <legend className="mb-2 text-sm font-semibold">Options {quiz.mode === "quiz" && <span className="font-normal text-slate-500">— tick the correct {q.type === "multi_select" ? "answers" : "answer"}</span>}</legend>
-                    <div className="grid gap-2 sm:grid-cols-2">
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                       {q.options.map((o, i) => {
                         const correct = q.correct_options.includes(i);
                         return (
@@ -168,7 +168,7 @@ export default function QuizBuilder() {
           )}
 
           <Panel title="Live settings">
-            <div className="grid gap-x-8 md:grid-cols-2">
+            <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
               <Toggle label="Shuffle question order" checked={quiz.shuffle_questions} onChange={(v) => setQuiz({ ...quiz, shuffle_questions: v })} />
               <Toggle label="Shuffle answer options" checked={quiz.shuffle_options} onChange={(v) => setQuiz({ ...quiz, shuffle_options: v })} />
               <Toggle label="Speed bonus" hint="Faster correct answers earn more points." checked={quiz.speed_bonus} onChange={(v) => setQuiz({ ...quiz, speed_bonus: v })} />

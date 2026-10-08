@@ -68,12 +68,12 @@ export function Panel({ title, action, children, className = "", delay = 0 }: { 
       className={`rounded-2xl border border-line bg-white shadow-soft hover:shadow-float transition-shadow duration-300 ${className}`}
     >
       {title && (
-        <header className="flex items-center justify-between border-b border-line/60 px-6 py-5">
+        <header className="flex flex-wrap items-center justify-between gap-2 border-b border-line/60 px-4 py-4 sm:px-6 sm:py-5">
           <h2 className="font-display text-lg font-bold tracking-tight text-ink">{title}</h2>
           {action}
         </header>
       )}
-      <div className="p-6">{children}</div>
+      <div className="p-4 sm:p-6">{children}</div>
     </motion.section>
   );
 }

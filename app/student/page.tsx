@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import AppShell, { PageTitle } from "@/components/AppShell";
 import { Panel, Badge, Button, Modal, statusTone } from "@/components/ui";
 import { useData } from "@/lib/data";
@@ -24,6 +24,8 @@ export default function StudentHome() {
   const [scanning, setScanning] = useState(false);
   const [myResults, setMyResults] = useState<QuizResult[]>([]);
   const [overviewQuizId, setOverviewQuizId] = useState<number | null>(null);
+  const [classSearch, setClassSearch] = useState("");
+  const [resultSearch, setResultSearch] = useState("");
 
   useEffect(() => {
     api.getMyResults().then(setMyResults).catch(console.error);
@@ -34,6 +36,26 @@ export default function StudentHome() {
   const pastQuizzes = quizzes.filter((q) => q.status === "closed" && mine.some((c) => c.id === q.class_id));
   const live = quizzes.find((q) => q.status === "live");
   const liveClass = classes.find((c) => c.id === live?.class_id);
+
+  const filteredClasses = useMemo(() => {
+    if (!classSearch.trim()) return mine;
+    const q = classSearch.toLowerCase().trim();
+    return mine.filter(
+      (c) =>
+        c.name.toLowerCase().includes(q) ||
+        c.subject_code.toLowerCase().includes(q) ||
+        (c.teacher_name && c.teacher_name.toLowerCase().includes(q)) ||
+        (c.join_code && c.join_code.toLowerCase().includes(q))
+    );
+  }, [mine, classSearch]);
+
+  const filteredRecentResults = useMemo(() => {
+    if (!resultSearch.trim()) return myResults.slice(0, 5);
+    const q = resultSearch.toLowerCase().trim();
+    return myResults
+      .filter((r) => r.quiz_title.toLowerCase().includes(q) || r.class_name.toLowerCase().includes(q))
+      .slice(0, 5);
+  }, [myResults, resultSearch]);
 
   const join = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,13 +106,51 @@ export default function StudentHome() {
         title="My classes"
         delay={0.1}
         action={
-          <Button variant="outline" className="text-xs px-3 py-1.5" onClick={() => { setJoinModalOpen(true); setErr(""); setSuccess(""); }}>
-            + Join with code
-          </Button>
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <div className="relative w-36 sm:w-56">
+              <input
+                type="text"
+                value={classSearch}
+                onChange={(e) => setClassSearch(e.target.value)}
+                placeholder="Search classes..."
+                className="w-full rounded-xl border border-line bg-slate-50/80 px-3 py-1.5 pl-8 text-xs text-ink placeholder:text-slate-400 focus:border-brand focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand/10 transition-all"
+              />
+              <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs">
+                🔍
+              </span>
+              {classSearch && (
+                <button
+                  type="button"
+                  onClick={() => setClassSearch("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs p-0.5"
+                  aria-label="Clear class search"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+            <Button variant="outline" className="text-xs px-3 py-1.5 whitespace-nowrap" onClick={() => { setJoinModalOpen(true); setErr(""); setSuccess(""); }}>
+              + Join with code
+            </Button>
+          </div>
         }
       >
+        {classSearch.trim() && (
+          <div className="mb-4 flex items-center justify-between text-xs text-slate-500">
+            <p>
+              Found <span className="font-bold text-ink">{filteredClasses.length}</span> of {mine.length} classes matching &ldquo;{classSearch}&rdquo;
+            </p>
+            <button
+              type="button"
+              onClick={() => setClassSearch("")}
+              className="font-semibold text-brand hover:underline"
+            >
+              Clear search
+            </button>
+          </div>
+        )}
         <ul className="divide-y divide-line/60">
-          {mine.map((c) => (
+          {filteredClasses.map((c) => (
             <li key={c.id} className="py-4 hover:bg-slate-50 transition-colors -mx-6 px-6">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <p className="font-display font-bold text-lg text-ink">{c.name}</p>
@@ -123,6 +183,7 @@ export default function StudentHome() {
                   <li key={q.id} className="flex items-center gap-2 text-sm font-medium">
                     <Badge tone="slate">closed</Badge>
                     <button
+                      type="button"
                       onClick={() => setOverviewQuizId(q.id)}
                       className="font-semibold text-slate-700 hover:text-brand hover:underline transition-colors text-left"
                     >
@@ -141,6 +202,14 @@ export default function StudentHome() {
               </Button>
             </li>
           )}
+          {mine.length > 0 && filteredClasses.length === 0 && (
+            <li className="py-8 text-center text-sm text-slate-500">
+              <p>No classes match &ldquo;{classSearch}&rdquo;</p>
+              <Button variant="outline" className="mt-3 text-xs" onClick={() => setClassSearch("")}>
+                Clear search
+              </Button>
+            </li>
+          )}
         </ul>
       </Panel>
 
@@ -150,18 +219,66 @@ export default function StudentHome() {
         className="mt-8"
         delay={0.2}
         action={
-          <Link href="/student/results" className="text-sm font-bold text-brand hover:text-brand/80 transition-colors">
-            See all →
-          </Link>
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            {myResults.length > 0 && (
+              <div className="relative w-36 sm:w-48">
+                <input
+                  type="text"
+                  value={resultSearch}
+                  onChange={(e) => setResultSearch(e.target.value)}
+                  placeholder="Filter recent..."
+                  className="w-full rounded-xl border border-line bg-slate-50/80 px-3 py-1.5 pl-8 text-xs text-ink placeholder:text-slate-400 focus:border-brand focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand/10 transition-all"
+                />
+                <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs">
+                  🔍
+                </span>
+                {resultSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setResultSearch("")}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs p-0.5"
+                    aria-label="Clear results search"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            )}
+            <Link href="/student/results" className="text-sm font-bold text-brand hover:text-brand/80 transition-colors whitespace-nowrap">
+              See all →
+            </Link>
+          </div>
         }
       >
+        {resultSearch.trim() && (
+          <div className="mb-4 flex items-center justify-between text-xs text-slate-500">
+            <p>
+              Found <span className="font-bold text-ink">{filteredRecentResults.length}</span> results matching &ldquo;{resultSearch}&rdquo;
+            </p>
+            <button
+              type="button"
+              onClick={() => setResultSearch("")}
+              className="font-semibold text-brand hover:underline"
+            >
+              Clear
+            </button>
+          </div>
+        )}
         <ul className="divide-y divide-line/60">
           {myResults.length === 0 && (
             <li className="py-6 text-center text-sm text-slate-500">
               Your quiz results will show up here after you complete a test.
             </li>
           )}
-          {myResults.slice(0, 5).map((r, idx) => (
+          {myResults.length > 0 && filteredRecentResults.length === 0 && (
+            <li className="py-6 text-center text-sm text-slate-500">
+              <p>No recent results match &ldquo;{resultSearch}&rdquo;</p>
+              <Button variant="outline" className="mt-3 text-xs" onClick={() => setResultSearch("")}>
+                Clear search
+              </Button>
+            </li>
+          )}
+          {filteredRecentResults.map((r, idx) => (
             <li
               key={`${r.quiz_id}-${r.played_at}-${r.id || idx}`}
               onClick={() => setOverviewQuizId(r.quiz_id)}

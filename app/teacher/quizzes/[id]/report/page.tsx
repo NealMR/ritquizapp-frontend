@@ -41,7 +41,7 @@ export default function Report() {
       <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
         {stats.map((s) => <div key={s.l} className="rounded-xl border border-line bg-white px-4 py-3"><p className="font-display text-3xl font-bold">{s.n}</p><p className="text-sm text-slate-600">{s.l}</p></div>)}
       </div>
-      <div className="grid gap-6 lg:grid-cols-[1.3fr_1fr]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.3fr_1fr]">
         <Panel title="By question">
           <ol className="flex flex-col gap-6">
             {rep.questions.map((q) => {

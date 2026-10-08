@@ -21,7 +21,7 @@ export default function Profile() {
         <>
           <PageTitle title="Profile" sub={user.email} />
           {error && <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
-          <div className="grid gap-6 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <Panel title="Your details">
               <form className="flex flex-col gap-4" onSubmit={run("details", async (f) => { updateUser(await api.updateMe(Object.fromEntries([...f.entries()].filter(([, v]) => v !== "")) as any)); })}>
                 <Input name="full_name" label="Full name" defaultValue={user.full_name} />
